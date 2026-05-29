@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>КОСМО-ФУТБОЛ · RONNIE vs MACY</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Russo+One&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#03040c; font-family:'Russo One',sans-serif; touch-action:none; }
+  canvas { display:block; width:100%; height:100%; }
+  #hud { position:fixed; top:0; left:0; right:0; padding:8px 12px; pointer-events:none; z-index:5; }
+  .row { display:flex; justify-content:space-between; align-items:flex-start; }
+  .side { width:38%; }
+  .name { font-family:'Bebas Neue'; font-size:15px; letter-spacing:1px; }
+  .blue .name{ color:#ffe14d; } .red .name{ color:#ff5fa8; text-align:right; }
+  .score { font-family:'Bebas Neue'; font-size:32px; line-height:.9; color:#fff; }
+  .red .score{ text-align:right; }
+  .hpbar { height:11px; border-radius:6px; background:rgba(255,255,255,.08); overflow:hidden; margin-top:3px; border:1px solid rgba(255,255,255,.15); }
+  .hpfill { height:100%; width:100%; }
+  .blue .hpfill{ background:linear-gradient(90deg,#0a3aa0,#ffe14d); }
+  .red .hpfill{ background:linear-gradient(270deg,#0a0a0a,#ff5fa8); float:right; }
+  #center { text-align:center; }
+  #timer { font-family:'Bebas Neue'; font-size:26px; color:#fff; background:rgba(255,255,255,.08); padding:1px 12px; border-radius:8px; display:inline-block; }
+  #goalTo { font-size:11px; color:#7fe0ff; margin-top:2px; }
+  #round { font-size:10px; color:#9fb6d6; }
+  #stick { position:fixed; bottom:26px; left:22px; width:124px; height:124px; border-radius:50%;
+    background:radial-gradient(circle,rgba(127,224,255,.08),rgba(255,255,255,.02)); border:2px solid rgba(127,224,255,.2); z-index:10; }
+  #knob { position:absolute; top:50%; left:50%; width:56px; height:56px; margin:-28px 0 0 -28px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff,#7fb6d6); box-shadow:0 0 14px rgba(127,224,255,.5); }
+  .btn { position:fixed; border-radius:50%; z-index:10; display:flex; align-items:center; justify-content:center;
+    font-family:'Bebas Neue'; font-size:19px; color:#fff; box-shadow:0 0 18px rgba(0,0,0,.5); border:2px solid rgba(255,255,255,.25); }
+  .btn:active { transform:scale(.92); }
+  #boost { right:124px; bottom:58px; width:76px; height:76px; background:radial-gradient(circle at 40% 35%,#7fe0ff,#1f6fd1); }
+  #punch { right:22px; bottom:30px; width:92px; height:92px; background:radial-gradient(circle at 40% 35%,#ff9a4d,#e4391b); }
+  .overlay { position:fixed; inset:0; background:radial-gradient(circle at 50% 30%,#0c1430,#03040c); z-index:50;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; }
+  .overlay.hide { display:none; }
+  #title { font-family:'Bebas Neue'; font-size:50px; line-height:.92; color:#fff; letter-spacing:2px; }
+  #title span { color:#ffe14d; display:block; }
+  #sub { color:#9fb6d6; margin:14px 0 26px; font-size:13px; max-width:350px; line-height:1.6; }
+  .big { font-family:'Bebas Neue'; font-size:28px; letter-spacing:1px; padding:13px 46px; border-radius:14px; color:#03040c;
+    background:linear-gradient(180deg,#ffe27a,#ffb01f); box-shadow:0 0 24px rgba(255,200,60,.5); cursor:pointer; }
+  .big:active{ transform:scale(.95); }
+  #result { font-family:'Bebas Neue'; font-size:44px; margin-bottom:4px; }
+  .hint { margin-top:20px; color:#5e7299; font-size:11px; line-height:1.6; }
+  #flash { position:fixed; inset:0; z-index:40; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  #flashTxt { font-family:'Bebas Neue'; font-size:60px; color:#fff; text-shadow:0 0 30px rgba(127,224,255,.8); opacity:0; }
+  /* character select */
+  #picks { display:flex; gap:18px; margin:18px 0 24px; }
+  .pick { width:140px; padding:16px 10px; border-radius:18px; cursor:pointer; border:3px solid transparent; background:rgba(255,255,255,.04); transition:.15s; }
+  .pick:active{ transform:scale(.96); }
+  .pick.sel { border-color:#ffe14d; background:rgba(255,225,77,.1); }
+  .pick.macy.sel { border-color:#ff5fa8; background:rgba(255,95,168,.1); }
+  .pick canvas { width:90px; height:120px; margin:0 auto; display:block; }
+  .pick .pn { font-family:'Bebas Neue'; font-size:24px; margin-top:6px; }
+  .pick.ronnie .pn{ color:#ffe14d; } .pick.macy .pn{ color:#ff5fa8; }
+  .pick .pd { font-size:10px; color:#9fb6d6; margin-top:2px; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud">
+  <div class="row">
+    <div class="side blue"><div class="name" id="nameBlue">RONNIE</div><div class="score" id="sBlue">0</div><div class="hpbar"><div class="hpfill" id="hpBlue"></div></div></div>
+    <div id="center"><div id="timer">3:00</div><div id="goalTo">ДО 3 ГОЛОВ</div><div id="round">РАУНД 1</div></div>
+    <div class="side red"><div class="name" id="nameRed">MACY</div><div class="score" id="sRed">0</div><div class="hpbar"><div class="hpfill" id="hpRed"></div></div></div>
+  </div>
+</div>
+<div id="stick"><div id="knob"></div></div>
+<div class="btn" id="boost">БУСТ</div>
+<div class="btn" id="punch">УДАР</div>
+<div id="flash"><div id="flashTxt"></div></div>
+
+<!-- SELECT SCREEN -->
+<div class="overlay" id="selectScreen">
+  <div id="title">КОСМО<span>ФУТБОЛ</span></div>
+  <div id="sub">Выбери, за кого играешь:</div>
+  <div id="picks">
+    <div class="pick ronnie sel" data-c="ronnie"><canvas id="prevR" width="90" height="120"></canvas><div class="pn">RONNIE</div><div class="pd">жёлтая форма · №7</div></div>
+    <div class="pick macy" data-c="macy"><canvas id="prevM" width="90" height="120"></canvas><div class="pn">MACY</div><div class="pd">розовая форма · №10</div></div>
+  </div>
+  <div class="big" id="startBtn">ИГРАТЬ</div>
+  <div class="hint">3 минуты на раунд или до N голов · соперник всё злее каждый раунд<br>камера отдаляется без мяча и приближается, когда мяч у тебя</div>
+</div>
+
+<!-- GAME OVER -->
+<div class="overlay hide" id="overScreen">
+  <div id="result"></div>
+  <div id="title2" style="font-family:'Bebas Neue';font-size:40px;color:#fff;"></div>
+  <div id="sub2" style="color:#9fb6d6;margin:14px 0 26px;font-size:13px;max-width:340px;line-height:1.6;"></div>
+  <div class="big" id="againBtn">ЕЩЁ РАЗ</div>
+</div>
+
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+let VW,VH,DPR;
+function resize(){DPR=Math.min(devicePixelRatio||1,2);VW=innerWidth;VH=innerHeight;cv.width=VW*DPR;cv.height=VH*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener('resize',resize);resize();
+
+const WORLD={w:2600,h:1500};
+const cam={x:0,y:0,zoom:1};
+const input={dx:0,dy:0,boost:false,punch:false};
+const SLOW=0.7; // game speed -30%
+
+const stick=document.getElementById('stick'),knob=document.getElementById('knob');
+let sid=null,sx=0,sy=0;
+function sStart(e){const t=e.changedTouches?e.changedTouches[0]:e;const r=stick.getBoundingClientRect();sx=r.left+r.width/2;sy=r.top+r.height/2;sid=e.changedTouches?t.identifier:'m';sMove(e);}
+function sMove(e){if(sid===null)return;let t;if(e.changedTouches){for(const tt of e.changedTouches)if(tt.identifier===sid){t=tt;break;}if(!t)return;}else t=e;
+  let dx=t.clientX-sx,dy=t.clientY-sy;const d=Math.hypot(dx,dy),mx=46;if(d>mx){dx=dx/d*mx;dy=dy/d*mx;}knob.style.transform=`translate(${dx}px,${dy}px)`;input.dx=dx/mx;input.dy=dy/mx;}
+function sEnd(){sid=null;input.dx=0;input.dy=0;knob.style.transform='translate(0,0)';}
+stick.addEventListener('touchstart',sStart,{passive:true});stick.addEventListener('touchmove',sMove,{passive:true});stick.addEventListener('touchend',sEnd);stick.addEventListener('touchcancel',sEnd);
+stick.addEventListener('mousedown',sStart);addEventListener('mousemove',e=>{if(sid)sMove(e);});addEventListener('mouseup',()=>{if(sid)sEnd();});
+function bind(id,on,off){const el=document.getElementById(id);el.addEventListener('touchstart',e=>{e.preventDefault();on();},{passive:false});el.addEventListener('touchend',e=>{e.preventDefault();off&&off();},{passive:false});el.addEventListener('mousedown',on);el.addEventListener('mouseup',()=>off&&off());}
+bind('boost',()=>input.boost=true,()=>input.boost=false);
+bind('punch',()=>input.punch=true);
+const keys={};addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' ')input.punch=true;});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+
+let players=[],ball=null,scoreB=0,scoreR=0,round=1,goalTarget=3,timeLeft=180,running=false,lastGoal=0;
+let heroChar='ronnie';
+const PARTICLES=[],STARS=[];
+function rand(a,b){return a+Math.random()*(b-a);}
+for(let i=0;i<260;i++)STARS.push({x:rand(0,WORLD.w),y:rand(0,WORLD.h),z:rand(.3,1),s:rand(.5,2)});
+
+// kits — ronnie (Ronaldo style), macy (Messi style)
+const KIT={
+  ronnie:{jersey:'#ffe14d',shorts:'#143a8c',skin:'#e8b48c',hair:'#2a1a10',num:'7',tag:'RONNIE'},
+  macy:{jersey:'#ff5fa8',shorts:'#111',skin:'#e8b48c',hair:'#3a2418',num:'10',tag:'MACY'}
+};
+
+class Footballer{
+  constructor(team,isHero,scale){
+    this.team=team;this.isHero=isHero;this.scale=scale||1;
+    const kitName=isHero?heroChar:(heroChar==='ronnie'?'macy':'ronnie');
+    this.kit=KIT[kitName];this.kitName=kitName;
+    this.x=team==='blue'?WORLD.w*0.3:WORLD.w*0.7;this.y=WORLD.h/2;
+    this.vx=0;this.vy=0;this.r=20*this.scale;this.maxhp=100;this.hp=100;
+    this.punchT=0;this.hitT=0;this.face=team==='blue'?1:-1;this.anim=Math.random()*9;this.stun=0;this.boostCD=0;
+  }
+  update(dt){
+    this.anim+=dt*0.2*SLOW*(1+Math.hypot(this.vx,this.vy)*0.05);
+    let ax=0,ay=0;const TH=0.45*SLOW;
+    if(this.isHero){
+      ax=input.dx*TH;ay=input.dy*TH;
+      if(keys['a'])ax=-TH;if(keys['d'])ax=TH;if(keys['w'])ay=-TH;if(keys['s'])ay=TH;
+      if(input.boost&&this.boostCD<=0&&(ax||ay||this.vx||this.vy)){const a=Math.atan2(ay||this.vy,ax||this.vx);this.vx+=Math.cos(a)*9*SLOW;this.vy+=Math.sin(a)*9*SLOW;this.boostCD=45;burst(this.x-Math.cos(a)*20,this.y-Math.sin(a)*20,'#7fe0ff',10);}
+      if(input.punch&&this.punchT<=0)this.doPunch();
+    } else this.ai(dt);
+    if(Math.abs(ax)>0.05)this.face=ax>0?1:-1;
+    this.vx+=ax;this.vy+=ay;this.vx*=0.985;this.vy*=0.985;
+    if(this.stun>0)this.stun-=dt;
+    this.x+=this.vx*dt;this.y+=this.vy*dt;
+    if(this.x<this.r){this.x=this.r;this.vx*=-0.6;}if(this.x>WORLD.w-this.r){this.x=WORLD.w-this.r;this.vx*=-0.6;}
+    if(this.y<this.r){this.y=this.r;this.vy*=-0.6;}if(this.y>WORLD.h-this.r){this.y=WORLD.h-this.r;this.vy*=-0.6;}
+    if(this.punchT>0)this.punchT-=dt;if(this.hitT>0)this.hitT-=dt;if(this.boostCD>0)this.boostCD-=dt;
+  }
+  ai(dt){
+    if(this.stun>0)return;
+    const aggr=0.5+round*0.13,TH=0.4*SLOW*(0.7+round*0.05);
+    const hero=players.find(p=>p.isHero);const goalX=this.team==='blue'?WORLD.w:0;
+    const dB=Math.hypot(ball.x-this.x,ball.y-this.y);let tx,ty;
+    const fight=hero&&Math.hypot(hero.x-this.x,hero.y-this.y)<150*this.scale&&Math.random()<aggr*0.025;
+    if(fight){tx=hero.x;ty=hero.y;this.face=hero.x>this.x?1:-1;if(Math.hypot(hero.x-this.x,hero.y-this.y)<85*this.scale&&this.punchT<=0&&Math.random()<0.07)this.doPunch();}
+    else if(dB<this.r+ball.r+34){tx=goalX;ty=WORLD.h/2;if(this.punchT<=0&&Math.random()<0.07){this.face=goalX>this.x?1:-1;this.doPunch();}}
+    else{tx=ball.x;ty=ball.y;}
+    const a=Math.atan2(ty-this.y,tx-this.x);this.vx+=Math.cos(a)*TH;this.vy+=Math.sin(a)*TH;
+    if(this.boostCD<=0&&dB>400&&Math.random()<0.02){this.vx+=Math.cos(a)*8*SLOW;this.vy+=Math.sin(a)*8*SLOW;this.boostCD=60;}
+  }
+  doPunch(){
+    this.punchT=18;const range=54*this.scale,px=this.x+this.face*range*0.6;
+    if(Math.hypot(ball.x-px,ball.y-this.y)<range+ball.r){const ang=Math.atan2(ball.y-this.y,(ball.x-this.x)+this.face*8),pw=12*SLOW*this.scale;
+      ball.vx=Math.cos(ang)*pw+this.face*8*SLOW;ball.vy=Math.sin(ang)*pw;ball.spin=this.face*0.6;burst(ball.x,ball.y,'#fff',10);}
+    for(const p of players){if(p===this||p.team===this.team)continue;
+      if(Math.hypot(p.x-px,p.y-this.y)<range+p.r){const k=10*SLOW*this.scale/p.scale;p.vx+=this.face*k;p.vy-=rand(-2,2)*SLOW;
+        p.hp-=this.isHero?15:9*this.scale;p.hitT=10;p.stun=14;burst(p.x,p.y,'#ffcf3d',14);
+        if(p.hp<=0){p.hp=0;knockout(this);}}}
+  }
+  draw(g,ox,oy,scl){ // g=ctx, optional override for preview
+    g=g||ctx;const s=this.scale*(scl||1),r=20*s,k=this.kit;
+    const x=(ox!==undefined?ox:this.x-cam.x),y=(oy!==undefined?oy:this.y-cam.y);
+    const sw=Math.sin(this.anim);
+    g.save();g.translate(x,y);if(this.hitT>0)g.translate(rand(-2,2),rand(-2,2));
+    if(this.isHero&&(input.dx||input.dy)&&ox===undefined){g.save();const a=Math.atan2(input.dy,input.dx);g.rotate(a+Math.PI);
+      const gr=g.createRadialGradient(r,0,0,r,0,40*s);gr.addColorStop(0,'rgba(127,224,255,.5)');gr.addColorStop(1,'transparent');
+      g.fillStyle=gr;g.beginPath();g.arc(r*1.4,0,30*s,0,7);g.fill();g.restore();}
+    g.lineCap='round';const bodyTop=-34*s,hipY=4*s;const col=this.hitT>0?'#fff':null;
+    g.strokeStyle=col||k.shorts;g.lineWidth=6*s;
+    g.beginPath();g.moveTo(0,hipY);g.lineTo(-12*s+sw*20*s,hipY+40*s);g.moveTo(0,hipY);g.lineTo(12*s-sw*20*s,hipY+40*s);g.stroke();
+    g.strokeStyle=col||'#fff';g.lineWidth=4*s;
+    g.beginPath();g.moveTo(-12*s+sw*20*s,hipY+40*s);g.lineTo(-12*s+sw*20*s+this.face*8*s,hipY+44*s);g.moveTo(12*s-sw*20*s,hipY+40*s);g.lineTo(12*s-sw*20*s+this.face*8*s,hipY+44*s);g.stroke();
+    g.strokeStyle=col||k.jersey;g.lineWidth=11*s;g.beginPath();g.moveTo(0,bodyTop);g.lineTo(0,hipY);g.stroke();
+    g.lineWidth=5*s;g.strokeStyle=col||k.jersey;const armY=bodyTop+8*s;
+    if(this.punchT>0){const pa=this.face*r*1.7;g.beginPath();g.moveTo(0,armY);g.lineTo(pa,armY-4*s);g.moveTo(0,armY);g.lineTo(-this.face*16*s,armY+22*s);g.stroke();g.fillStyle=col||k.skin;g.beginPath();g.arc(pa,armY-4*s,5*s,0,7);g.fill();}
+    else{g.beginPath();g.moveTo(0,armY);g.lineTo(-16*s+sw*8*s,armY+26*s);g.moveTo(0,armY);g.lineTo(16*s-sw*8*s,armY+26*s);g.stroke();g.fillStyle=col||k.skin;g.beginPath();g.arc(-16*s+sw*8*s,armY+26*s,4.5*s,0,7);g.arc(16*s-sw*8*s,armY+26*s,4.5*s,0,7);g.fill();}
+    if(!col){g.fillStyle='rgba(0,0,0,.55)';g.font=`bold ${10*s}px Bebas Neue`;g.textAlign='center';g.fillText(k.num,0,bodyTop+18*s);}
+    g.fillStyle=col||k.skin;g.beginPath();g.arc(0,bodyTop-9*s,9*s,0,7);g.fill();
+    g.fillStyle=col||k.hair;g.beginPath();g.arc(0,bodyTop-12*s,9*s,Math.PI,0);g.fill();
+    g.fillStyle=col||'#000';g.beginPath();g.arc(this.face*3*s,bodyTop-9*s,1.6*s,0,7);g.fill();
+    if(ox===undefined){g.fillStyle=this.team==='blue'?'#ffe14d':'#ff5fa8';g.font=`${10*s}px Bebas Neue`;g.textAlign='center';g.fillText(k.tag,0,bodyTop-24*s);}
+    g.restore();
+  }
+}
+
+function burst(x,y,c,n){for(let i=0;i<n;i++)PARTICLES.push({x,y,vx:rand(-5,5)*SLOW,vy:rand(-5,5)*SLOW,life:rand(15,32),color:c,r:rand(2,5)});}
+
+class Ball{
+  constructor(){this.r=15;this.spin=0;this.reset();}
+  reset(){this.x=WORLD.w/2;this.y=WORLD.h/2;this.vx=rand(-3,3)*SLOW;this.vy=rand(-3,3)*SLOW;this.owner=null;}
+  update(dt){
+    this.vx*=0.994;this.vy*=0.994;this.spin*=0.96;
+    this.x+=this.vx*dt;this.y+=this.vy*dt;
+    if(this.x<this.r){this.x=this.r;this.vx*=-0.8;}if(this.x>WORLD.w-this.r){this.x=WORLD.w-this.r;this.vx*=-0.8;}
+    if(this.y<this.r){this.y=this.r;this.vy*=-0.8;}if(this.y>WORLD.h-this.r){this.y=WORLD.h-this.r;this.vy*=-0.8;}
+    this.owner=null;
+    for(const p of players){const dx=this.x-p.x,dy=this.y-p.y,d=Math.hypot(dx,dy);
+      if(d<this.r+p.r+30)this.owner=p; // possession (loose)
+      if(d<this.r+p.r){const a=Math.atan2(dy,dx),f=3*SLOW;this.vx+=Math.cos(a)*f+p.vx*0.3;this.vy+=Math.sin(a)*f+p.vy*0.3;this.x=p.x+Math.cos(a)*(this.r+p.r);this.y=p.y+Math.sin(a)*(this.r+p.r);}}
+    const gH=240,gT=WORLD.h/2-gH/2,gB=WORLD.h/2+gH/2;
+    if(this.y>gT&&this.y<gB){if(this.x<32)goal('red');else if(this.x>WORLD.w-32)goal('blue');}
+  }
+  draw(){const x=this.x-cam.x,y=this.y-cam.y;ctx.save();ctx.translate(x,y);ctx.rotate(this.spin*performance.now()*0.002);
+    const g=ctx.createRadialGradient(-4,-4,2,0,0,this.r);g.addColorStop(0,'#fff');g.addColorStop(1,'#cfd6e0');
+    ctx.beginPath();ctx.arc(0,0,this.r,0,7);ctx.fillStyle=g;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#222';ctx.stroke();
+    ctx.fillStyle='#222';for(let i=0;i<5;i++){const a=i/5*7;ctx.beginPath();ctx.arc(Math.cos(a)*this.r*0.5,Math.sin(a)*this.r*0.5,this.r*0.2,0,7);ctx.fill();}
+    ctx.restore();}
+}
+
+function flash(t,c){const f=document.getElementById('flashTxt');f.textContent=t;f.style.color=c||'#fff';
+  f.style.transition='none';f.style.opacity='1';f.style.transform='scale(1.4)';
+  requestAnimationFrame(()=>{f.style.transition='all 1s ease-out';f.style.opacity='0';f.style.transform='scale(1)';});}
+
+function goal(team){
+  if(performance.now()-lastGoal<800)return;lastGoal=performance.now();
+  const heroBlue=true;
+  if(team==='blue'){scoreB++;document.getElementById('sBlue').textContent=scoreB;flash('GOOOAL!','#ffe14d');}
+  else{scoreR++;document.getElementById('sRed').textContent=scoreR;flash('ГОЛ СОПЕРНИКА','#ff5fa8');}
+  burst(ball.x,ball.y,team==='blue'?'#ffe14d':'#ff5fa8',46);ball.reset();
+  if(scoreB>=goalTarget)endRound(true);else if(scoreR>=goalTarget)endRound(false);
+}
+function knockout(by){flash(by.team==='blue'?'НОКАУТ!':'ТЫ ПОВЕРЖЕН','#ffd34d');endRound(by.team==='blue');}
+
+function spawnRound(){
+  players=players.filter(p=>p.isHero);
+  players.forEach(p=>{p.hp=100;p.x=WORLD.w*0.3;p.y=WORLD.h/2;p.vx=0;p.vy=0;});
+  players.push(new Footballer('red',false,1+(round-1)*0.15));
+  goalTarget=2+round;timeLeft=180; // 3 minutes
+  document.getElementById('goalTo').textContent='ДО '+goalTarget+' ГОЛОВ';
+  document.getElementById('round').textContent='РАУНД '+round;
+  scoreB=0;scoreR=0;document.getElementById('sBlue').textContent=0;document.getElementById('sRed').textContent=0;
+  document.getElementById('nameBlue').textContent=KIT[heroChar].tag;
+  document.getElementById('nameRed').textContent=KIT[heroChar==='ronnie'?'macy':'ronnie'].tag;
+  ball=new Ball();
+}
+function startGame(){round=1;running=true;
+  document.getElementById('selectScreen').classList.add('hide');
+  document.getElementById('overScreen').classList.add('hide');
+  players=[];PARTICLES.length=0;cam.zoom=1;
+  players.push(new Footballer('blue',true,1.1));spawnRound();}
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('againBtn').addEventListener('click',()=>{document.getElementById('overScreen').classList.add('hide');document.getElementById('selectScreen').classList.remove('hide');});
+
+function endRound(heroWin){
+  running=false;
+  if(heroWin){round++;setTimeout(()=>{flash('РАУНД '+round,'#7fe0ff');running=true;spawnRound();},1300);}
+  else setTimeout(gameOver,1300);
+}
+function gameOver(){
+  document.getElementById('overScreen').classList.remove('hide');
+  document.getElementById('result').textContent='ПОРАЖЕНИЕ';document.getElementById('result').style.color='#ff5fa8';
+  document.getElementById('title2').textContent='Ты дошёл до раунда '+round;
+  document.getElementById('sub2').textContent='Соперник с каждым раундом крупнее и злее, а голов до победы — больше. Реванш?';
+}
+
+// time-up: more goals wins, tie -> hero continues
+function timeUp(){ endRound(scoreB>=scoreR); }
+
+function drawSpace(){
+  const g=ctx.createRadialGradient(VW*0.5,VH*0.3,0,VW*0.5,VH*0.3,Math.max(VW,VH));
+  g.addColorStop(0,'#16204a');g.addColorStop(.5,'#0a0e22');g.addColorStop(1,'#03040c');
+  ctx.fillStyle=g;ctx.fillRect(0,0,VW,VH);
+  ctx.save();
+  // apply camera zoom around screen center
+  ctx.translate(VW/2,VH/2);ctx.scale(cam.zoom,cam.zoom);ctx.translate(-VW/2,-VH/2);
+  for(const st of STARS){const x=st.x-cam.x*st.z,y=st.y-cam.y*st.z;ctx.globalAlpha=0.4+st.z*0.6;ctx.fillStyle='#fff';ctx.fillRect(x,y,st.s,st.s);}
+  ctx.globalAlpha=1;
+  ctx.globalAlpha=0.12;ctx.fillStyle='#6a3fff';ctx.beginPath();ctx.arc(WORLD.w*0.3-cam.x*0.5,WORLD.h*0.2-cam.y*0.5,200,0,7);ctx.fill();
+  ctx.fillStyle='#ff3f9a';ctx.beginPath();ctx.arc(WORLD.w*0.7-cam.x*0.5,WORLD.h*0.8-cam.y*0.5,240,0,7);ctx.fill();ctx.globalAlpha=1;
+  ctx.strokeStyle='rgba(127,224,255,.25)';ctx.lineWidth=3;ctx.strokeRect(-cam.x,-cam.y,WORLD.w,WORLD.h);
+  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=2;ctx.setLineDash([14,16]);
+  ctx.beginPath();ctx.moveTo(WORLD.w/2-cam.x,-cam.y);ctx.lineTo(WORLD.w/2-cam.x,WORLD.h-cam.y);ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.arc(WORLD.w/2-cam.x,WORLD.h/2-cam.y,90,0,7);ctx.stroke();
+  drawGoal(0,'#ffe14d');drawGoal(WORLD.w,'#ff5fa8');
+}
+function drawGoal(side,color){
+  const gH=240,cy=WORLD.h/2,top=cy-gH/2-cam.y,bot=cy+gH/2-cam.y,dir=side===0?1:-1,x=side-cam.x;
+  ctx.shadowColor=color;ctx.shadowBlur=20;ctx.strokeStyle=color;ctx.lineWidth=6;
+  ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x+dir*44,top);ctx.moveTo(x,bot);ctx.lineTo(x+dir*44,bot);ctx.moveTo(x,top);ctx.lineTo(x,bot);ctx.stroke();
+  ctx.shadowBlur=0;ctx.strokeStyle=color+'40';ctx.lineWidth=1;
+  for(let i=1;i<9;i++){const yy=top+(bot-top)*i/9;ctx.beginPath();ctx.moveTo(x,yy);ctx.lineTo(x+dir*44,yy);ctx.stroke();}
+  ctx.fillStyle=color+'14';ctx.fillRect(side===0?x:x+dir*44,top,44,bot-top);
+}
+
+function updateCam(dt){
+  const h=players.find(p=>p.isHero);if(!h)return;
+  // dynamic zoom: ball with hero -> zoom in (not too close); without -> zoom out
+  const haveBall = ball && ball.owner===h;
+  const targetZoom = haveBall? 1.05 : 0.78; // in vs out
+  cam.zoom += (targetZoom-cam.zoom)*0.05;
+  cam.x+=((h.x-VW/2)-cam.x)*0.08;cam.y+=((h.y-VH*0.5)-cam.y)*0.08;
+  const maxX=Math.max(0,WORLD.w-VW),maxY=Math.max(0,WORLD.h-VH);
+  cam.x=Math.max(-VW*0.15,Math.min(maxX+VW*0.15,cam.x));cam.y=Math.max(-VH*0.15,Math.min(maxY+VH*0.15,cam.y));
+}
+
+// preview drawing on select screen
+function drawPreview(canvasId,kitName){
+  const c=document.getElementById(canvasId),g=c.getContext('2d');g.clearRect(0,0,90,120);
+  const fake=Object.create(Footballer.prototype);fake.kit=KIT[kitName];fake.scale=1.4;fake.face=1;fake.anim=0;fake.punchT=0;fake.hitT=0;fake.isHero=false;fake.team='x';
+  fake.draw(g,45,80,1);
+}
+drawPreview('prevR','ronnie');drawPreview('prevM','macy');
+document.querySelectorAll('.pick').forEach(el=>{el.addEventListener('click',()=>{
+  document.querySelectorAll('.pick').forEach(p=>p.classList.remove('sel'));el.classList.add('sel');heroChar=el.dataset.c;});});
+
+let last=performance.now();
+function loop(now){const dt=Math.min((now-last)/16.67,2.5);last=now;
+  if(running){updateCam(dt);ball.update(dt);for(const p of players)p.update(dt);
+    timeLeft-=dt/60*SLOW;if(timeLeft<=0){timeLeft=0;timeUp();}
+    const m=Math.floor(timeLeft/60),s=Math.floor(timeLeft%60);document.getElementById('timer').textContent=`${m}:${s<10?'0':''}${s}`;
+    const h=players.find(p=>p.isHero),v=players.find(p=>!p.isHero);
+    if(h)document.getElementById('hpBlue').style.width=Math.max(0,h.hp)+'%';
+    if(v)document.getElementById('hpRed').style.width=Math.max(0,v.hp)+'%';
+    input.punch=false;}
+  else updateCam(dt);
+  drawSpace();
+  if(ball){const all=[...players,{__b:1,y:ball.y}].sort((a,b)=>a.y-b.y);for(const e of all){if(e.__b)ball.draw();else e.draw();}}
+  for(let i=PARTICLES.length-1;i>=0;i--){const p=PARTICLES[i];p.x+=p.vx;p.y+=p.vy;p.vx*=0.97;p.vy*=0.97;p.life-=dt;
+    ctx.globalAlpha=Math.max(0,p.life/32);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x-cam.x,p.y-cam.y,p.r,0,7);ctx.fill();ctx.globalAlpha=1;
+    if(p.life<=0)PARTICLES.splice(i,1);}
+  ctx.restore(); // end zoom transform
+  requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
